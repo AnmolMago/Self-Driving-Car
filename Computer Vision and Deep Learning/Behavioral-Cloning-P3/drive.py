@@ -1,3 +1,6 @@
+import cv2
+import numpy as np
+
 import argparse
 import base64
 from datetime import datetime
@@ -18,7 +21,18 @@ sio = socketio.Server()
 app = Flask(__name__)
 model = None
 prev_image_array = None
+save_img = True
 
+def preprocess(img):
+    global save_img
+    if save_img:
+        cv2.imwrite('./thisiswhatiget.jpg', img)
+    img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)[55:140]
+    img = cv2.resize(img,(64,64), interpolation=cv2.INTER_AREA)
+    if save_img:
+        cv2.imwrite('./thisiswhatioutput.jpg', img)
+    save_img = False
+    return img
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -32,8 +46,13 @@ def telemetry(sid, data):
         # The current image from the center camera of the car
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
-        image_array = np.asarray(image)
-        steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
+        image = np.asarray(image)
+        image = preprocess(image)
+        print(image.shape)
+        try:
+            steering_angle = float(model.predict(image[None, :, :, :], batch_size=1))
+        except Exception as e:
+            print(e)
         throttle = 0.2
         print(steering_angle, throttle)
         send_control(steering_angle, throttle)
