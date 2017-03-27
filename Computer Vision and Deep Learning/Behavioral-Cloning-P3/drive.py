@@ -1,9 +1,6 @@
-import cv2
-import numpy as np
-
 import argparse
 import base64
-from datetime import datetime
+import json
 import os
 import shutil
 
@@ -11,61 +8,70 @@ import numpy as np
 import socketio
 import eventlet
 import eventlet.wsgi
+from datetime import datetime
+import time
 from PIL import Image
-from flask import Flask
+from PIL import ImageOps
+from flask import Flask, render_template
 from io import BytesIO
-
+import pdb
+import cv2
 from keras.models import load_model
+
+from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array
+
+# Fix error with Keras and TensorFlow
+import tensorflow as tf
+tf.python.control_flow_ops = tf
 
 sio = socketio.Server()
 app = Flask(__name__)
 model = None
 prev_image_array = None
-save_img = True
 
+save_img = False
 def preprocess(img):
     global save_img
     if save_img:
         cv2.imwrite('./thisiswhatiget.jpg', img)
-    img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)[55:140]
-    img = cv2.resize(img,(64,64), interpolation=cv2.INTER_AREA)
+    img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)[60:140]
+    img = cv2.resize(img,(160, 48), interpolation=cv2.INTER_AREA)
     if save_img:
         cv2.imwrite('./thisiswhatioutput.jpg', img)
     save_img = False
-    return img
+    return img/255.
 
 @sio.on('telemetry')
 def telemetry(sid, data):
-    if data:
-        # The current steering angle of the car
-        steering_angle = data["steering_angle"]
-        # The current throttle of the car
-        throttle = data["throttle"]
-        # The current speed of the car
-        speed = data["speed"]
-        # The current image from the center camera of the car
-        imgString = data["image"]
-        image = Image.open(BytesIO(base64.b64decode(imgString)))
-        image = np.asarray(image)
-        image = preprocess(image)
-        print(image.shape)
-        try:
-            steering_angle = float(model.predict(image[None, :, :, :], batch_size=1))
-        except Exception as e:
-            print(e)
-        throttle = 0.2
-        print(steering_angle, throttle)
-        send_control(steering_angle, throttle)
+    # The current steering angle of the car
+    steering_angle = data["steering_angle"]
+    # The current throttle of the car
+    throttle = data["throttle"]
+    # The current speed of the car
+    speed = float(data["speed"])
+    # The current image from the center camera of the car
+    imgString = data["image"]
+    image = Image.open(BytesIO(base64.b64decode(imgString)))
+    image = np.asarray(image)
+    original_image = image.copy()
+    image = preprocess(image)
+    # This model currently assumes that the features of the model are just the images. Feel free to change this.
+    try:
+        steering_angle = float(model.predict(image[None, :, :, :], batch_size=1))
+    except Exception as e:
+        print(e)
+    # The driving model currently just outputs a constant throttle. Feel free to edit this.
+    
+    throttle = max(-1,1 - (speed / 15.0))
+    print(steering_angle, throttle)
+    send_control(steering_angle, throttle)
 
-        # save frame
-        if args.image_folder != '':
-            timestamp = datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]
-            image_filename = os.path.join(args.image_folder, timestamp)
-            image.save('{}.jpg'.format(image_filename))
-    else:
-        # NOTE: DON'T EDIT THIS.
-        sio.emit('manual', data={}, skip_sid=True)
-
+    # save frame
+    if args.image_folder != '':
+        timestamp = datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]
+        image_filename = os.path.join(args.image_folder, timestamp)
+        # image.save('{}.jpg'.format(image_filename))
+        cv2.imwrite('{}.jpg'.format(image_filename), cv2.cvtColor(original_image,cv2.COLOR_BGR2RGB))
 
 @sio.on('connect')
 def connect(sid, environ):
@@ -74,13 +80,10 @@ def connect(sid, environ):
 
 
 def send_control(steering_angle, throttle):
-    sio.emit(
-        "steer",
-        data={
-            'steering_angle': steering_angle.__str__(),
-            'throttle': throttle.__str__()
-        },
-        skip_sid=True)
+    sio.emit("steer", data={
+    'steering_angle': steering_angle.__str__(),
+    'throttle': throttle.__str__()
+    }, skip_sid=True)
 
 
 if __name__ == '__main__':
