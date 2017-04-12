@@ -54,16 +54,23 @@ public:
 
   /**
    * Updates the state by using standard Kalman Filter equations
-   * @param z The measurement at k+1
+   * @param z The measurement at k+1 in Cartesian coordinates
    */
-  void Update(const Eigen::VectorXd &z);
+  void UpdateLidar(const Eigen::VectorXd &z);
 
   /**
    * Updates the state by using Extended Kalman Filter equations
-   * @param z The measurement at k+1
+   * @param z The measurement at k+1 in Polar coordinates
    */
-  void UpdateEKF(const Eigen::VectorXd &z);
+  void UpdateRadar(const Eigen::VectorXd &z);
 
+private:
+  /**
+   * Updates the state by using standard Kalman Filter equations
+   * @param y The error between predicted state and measured state
+   * @param H The measurement matrix to use
+   */
+  void UpdateHelper(const Eigen::VectorXd &y, const Eigen::MatrixXd &H);
 };
 
 #endif /* KALMAN_FILTER_H_ */
