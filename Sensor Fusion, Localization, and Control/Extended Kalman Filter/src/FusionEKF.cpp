@@ -61,16 +61,11 @@ FusionEKF::~FusionEKF() {}
 
 void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
 
-  /*****************************************************************************
-   *  Initialization
-   ****************************************************************************/
-
   if (!is_initialized_) {
 
     double px = 0.0;
     double py = 0.0;
 
-    ekf_.x_ << 0.0, 0.0, 0.0, 0.0;
     if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
       double rho = measurement_pack.raw_measurements_[0];
       double phi = measurement_pack.raw_measurements_[1];
@@ -88,13 +83,10 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     return;
   }
 
-  /*****************************************************************************
-   *  Prediction
-   ****************************************************************************/
-  double microseconds_to_seconds = 1000000.0;
+  double microseconds_per_second = 1000000.0;
   float noise_ax = 9, noise_ay = 9; 
 
-  double dt = (measurement_pack.timestamp_ - previous_timestamp_) / microseconds_to_seconds; 
+  double dt = (measurement_pack.timestamp_ - previous_timestamp_) / microseconds_per_second; 
   double dt_2 = dt * dt;
   double dt_3 = dt_2 * dt;
   double dt_4 = dt_3 * dt;
