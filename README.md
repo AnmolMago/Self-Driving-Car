@@ -25,6 +25,12 @@ https://youtu.be/Muqe1Tjq-UQ
 
 Applied behavioral cloning to autonomously drive simulated vehicles.
 
+### Traffic Sign Classifier
+
+![Traffic Signs](http://anmolmago.com/i/Github/Udacity/SDCND/Traffic%20Signs.png#)
+
+Achieved 95.55% accuracy classifying the [German Traffic Sign Dataset](http://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset).
+
 ### Vehicle Detection
 
 Video:
