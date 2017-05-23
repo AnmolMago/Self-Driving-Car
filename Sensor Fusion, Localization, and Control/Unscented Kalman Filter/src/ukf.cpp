@@ -100,6 +100,7 @@ void UKF::ProcessMeasurement(MeasurementPackage measurement_pack) {
       if(vx != 0) yaw = vy/vx;
       if (px == 0.0) px = 0.0001;
       if (py == 0.0) py = 0.0001;
+      
       x_ << px, py, v, yaw, yawd;
     } else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER && use_laser_) {
       double px = measurement_pack.raw_measurements_[0];
